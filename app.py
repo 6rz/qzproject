@@ -1,3 +1,4 @@
+# -*- coding:utf-8 -*-
 import os
 import flask_admin
 import flask_login
@@ -10,9 +11,13 @@ from flask_admin.contrib import sqla
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
+# Create application
+app = Flask(__name__, static_folder='files')
 
-# Create Flask application
-app = Flask(__name__)
+
+# set flask admin swatch
+#app.config['FLASK_ADMIN_SWATCH'] = 'cerulean'
+app.config['FLASK_ADMIN_SWATCH'] = 'cosmo'
 
 # Create dummy secrey key so we can use sessions
 app.config['SECRET_KEY'] = '123456790'
@@ -23,15 +28,24 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + app.config['DATABASE_FILE
 app.config['SQLALCHEMY_ECHO'] = True
 db = SQLAlchemy(app)
 
+# Create directory for file fields to use
+file_path = os.path.join(os.path.dirname(__file__), 'files')
+try:
+    os.mkdir(file_path)
+except OSError:
+    pass
 
+# ++ 根据登录用户设置访问目录
+user_home = 'userhome'
 # Create user model.
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    first_name = db.Column(db.String(100))
-    last_name = db.Column(db.String(100))
+    name = db.Column(db.String(100))
     login = db.Column(db.String(80), unique=True)
     email = db.Column(db.String(120))
     password = db.Column(db.String(64))
+    phone = db.Column(db.Unicode(32))
+    notes = db.Column(db.UnicodeText)
 
     # Flask-Login integration
     def is_authenticated(self):
@@ -48,7 +62,7 @@ class User(db.Model):
 
     # Required for administrative interface
     def __unicode__(self):
-        return self.username
+        return self.name
 
 
 # Define login and registration forms (for flask-login)
@@ -69,7 +83,7 @@ class LoginForm(form.Form):
             raise validators.ValidationError('Invalid password')
 
     def get_user(self):
-        return db.session.query(User).filter_by(login=self.login.data).first()
+        return db.session.query(User).filter_by(login=self.login.data.lower()).first()
 
 
 class RegistrationForm(form.Form):
@@ -78,7 +92,7 @@ class RegistrationForm(form.Form):
     password = fields.PasswordField(validators=[validators.required()])
 
     def validate_login(self, field):
-        if db.session.query(User).filter_by(login=self.login.data).count() > 0:
+        if db.session.query(User).filter_by(login=self.login.data.lower()).count() > 0:
             raise validators.ValidationError('Duplicate username')
 
 
@@ -131,6 +145,9 @@ class MyAdminIndexView(flask_admin.AdminIndexView):
             user = User()
 
             form.populate_obj(user)
+            user.name = form.login.data.lower()
+            user.login = user.name.lower()
+            user.email = form.email.data
             # we hash the users password to avoid saving it as plaintext in the db,
             # remove to use plain text:
             user.password = generate_password_hash(form.password.data)
@@ -161,7 +178,7 @@ def index():
 init_login()
 
 # Create admin
-admin = flask_admin.Admin(app, 'Example: Auth', index_view=MyAdminIndexView(), base_template='my_master.html')
+admin = flask_admin.Admin(app,u'Qz阅读', index_view=MyAdminIndexView(), base_template='my_master.html',template_mode='bootstrap3')
 
 # Add view
 admin.add_view(MyModelView(User, db.session))
@@ -182,24 +199,17 @@ def build_sample_db():
     test_user = User(login="test", password=generate_password_hash("test"))
     db.session.add(test_user)
 
-    first_names = [
-        'Harry', 'Amelia', 'Oliver', 'Jack', 'Isabella', 'Charlie','Sophie', 'Mia',
-        'Jacob', 'Thomas', 'Emily', 'Lily', 'Ava', 'Isla', 'Alfie', 'Olivia', 'Jessica',
-        'Riley', 'William', 'James', 'Geoffrey', 'Lisa', 'Benjamin', 'Stacey', 'Lucy'
-    ]
-    last_names = [
-        'Brown', 'Smith', 'Patel', 'Jones', 'Williams', 'Johnson', 'Taylor', 'Thomas',
-        'Roberts', 'Khan', 'Lewis', 'Jackson', 'Clarke', 'James', 'Phillips', 'Wilson',
-        'Ali', 'Mason', 'Mitchell', 'Rose', 'Davis', 'Davies', 'Rodriguez', 'Cox', 'Alexander'
+    user_names = [
+        'Harry','Mia','Riley', 'William', 'James', 'Geoffrey', 'Lisa', 'Lucy'
     ]
 
-    for i in range(len(first_names)):
+    for i in range(len(user_names)):
         user = User()
-        user.first_name = first_names[i]
-        user.last_name = last_names[i]
-        user.login = user.first_name.lower()
+        user.name = user_names[i]
+        user.login = user.name.lower()
         user.email = user.login + "@example.com"
-        user.password = generate_password_hash(''.join(random.choice(string.ascii_lowercase + string.digits) for i in range(10)))
+        tmp = ''.join(random.choice(string.digits) for i in range(10))
+        user.phone = "(" + tmp[0:3] + ") " + tmp[3:6] + " " + tmp[6::]
         db.session.add(user)
 
     db.session.commit()
@@ -214,4 +224,4 @@ if __name__ == '__main__':
         build_sample_db()
 
     # Start app
-    app.run(debug=True)
+    app.run(host='0.0.0.0', debug=True, use_reloader=True)
