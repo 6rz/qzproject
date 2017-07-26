@@ -2,6 +2,8 @@
 import os
 import flask_admin
 import flask_login
+import subprocess
+import sys
 
 from flask import Flask, url_for, redirect, render_template, request
 from flask_sqlalchemy import SQLAlchemy
@@ -13,6 +15,11 @@ from flask_admin.form import rules
 from flask_admin.contrib import sqla
 
 from werkzeug.security import generate_password_hash, check_password_hash
+
+reload(sys)
+sys.setdefaultencoding('gb18030')
+#sys.setdefaultencoding('utf8')
+
 
 # Create application
 app = Flask(__name__, static_folder='files')
@@ -205,6 +212,8 @@ class UserView(sqla.ModelView):
     edit_template = 'rule_edit.html'
 
     column_exclude_list = ('password', 'notes')
+    can_create = False
+
     def is_accessible(self):
         return flask_login.current_user.is_authenticated
 # Create customized model view class
@@ -295,10 +304,14 @@ class MyAdminIndexView(flask_admin.AdminIndexView):
 class UseroptView(flask_admin.BaseView):
     @flask_admin.expose('/')
     def index(self):
-        if flask_login.current_user.login == "admin":
-            return render_template('user_admin.html')
+    
+        output = subprocess.Popen(['dir'],stdout=subprocess.PIPE,shell=True).communicate()
+        print output[0]
 
-        return render_template('user_profile.html')
+        if flask_login.current_user.login == "admin":
+            return render_template('user_admin.html',data=output[0])
+
+        return render_template('user_profile.html',data=output[0])
 
     def is_accessible(self):
         return flask_login.current_user.is_authenticated
@@ -355,8 +368,8 @@ admin = flask_admin.Admin(app,u'Qz阅读', index_view=MyAdminIndexView(), base_t
 admin.add_view(FileView(File, db.session))
 admin.add_view(ImageView(Image, db.session))
 admin.add_view(StoryView(Story, db.session))
-admin.add_view(UserView(User, db.session, name='User'))
-admin.add_view(UseroptView())
+admin.add_view(UserView(User, db.session, name='Userlist'))
+admin.add_view(UseroptView(name = 'UserOption'))
 
 def build_sample_db():
     """
