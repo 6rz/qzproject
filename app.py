@@ -223,11 +223,19 @@ class MyAdminIndexView(flask_admin.AdminIndexView):
             return redirect(url_for('.login_view'))
 
         # Create User directory for file fields to use
-        user_dir = os.path.join(os.path.dirname(__file__), 'files', flask_login.current_user.name)
-        try:
-            os.mkdir(user_dir)
-        except OSError:
+#        user_dir = os.path.join(os.path.dirname(__file__), 'files', flask_login.current_user.name)
+        user_dir = os.path.join(os.path.dirname(__file__), 'files', flask_login.current_user.login)
+        ret = os.access(user_dir, os.R_OK)
+#        print u"R_OK - 返回值 %s"% ret
+        if ret:
+#            print u"已存在目录 %s"% user_dir
             pass
+        else:
+            try:
+                os.mkdir(user_dir)
+#                print u"创建目录 %s"% user_dir                
+            except OSError:
+                pass
         return super(MyAdminIndexView, self).index()
 
     @flask_admin.expose('/login/', methods=('GET', 'POST'))
@@ -284,7 +292,17 @@ class MyAdminIndexView(flask_admin.AdminIndexView):
         if flask_login.current_user.is_authenticated:
             return redirect(url_for('.index'))
 
+class UseroptView(flask_admin.BaseView):
+    @flask_admin.expose('/')
+    def index(self):
+        if flask_login.current_user.login == "admin":
+            return render_template('user_admin.html')
 
+        return render_template('user_profile.html')
+
+    def is_accessible(self):
+        return flask_login.current_user.is_authenticated
+        
 # Initialize flask-login
 def init_login():
     login_manager = flask_login.LoginManager()
@@ -338,7 +356,7 @@ admin.add_view(FileView(File, db.session))
 admin.add_view(ImageView(Image, db.session))
 admin.add_view(StoryView(Story, db.session))
 admin.add_view(UserView(User, db.session, name='User'))
-
+admin.add_view(UseroptView())
 
 def build_sample_db():
     """
