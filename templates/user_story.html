@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>
+			Story-Qz阅读
+		</title>
+		<meta charset="UTF-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta name="description" content="">
+		<meta name="author" content="">
+		<link href="/admin/static/bootstrap/bootstrap3/swatch/cosmo/bootstrap.min.css?v=3.3.5"
+		rel="stylesheet">
+		<link href="/admin/static/admin/css/bootstrap3/admin.css?v=1.1.1" rel="stylesheet">
+		<style>
+			body{padding-top:4px}
+		</style>
+		<link href="/admin/static/vendor/select2/select2.css?v=3.5.2" rel="stylesheet">
+		<link href="/admin/static/vendor/select2/select2-bootstrap3.css?v=1.4.6"
+		rel="stylesheet">
+		<link href="/admin/static/vendor/bootstrap-daterangepicker/daterangepicker-bs3.css?v=1.3.22"
+		rel="stylesheet">
+	</head>
+	<body>
+		<div class="container">
+			<nav class="navbar navbar-default" role="navigation">
+				<!--Brand and toggle get grouped for better mobile display-->
+				<div class="navbar-header">
+					<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#admin-navbar-collapse">
+						<span class="sr-only">
+							Toggle navigation
+						</span>
+						<span class="icon-bar">
+						</span>
+						<span class="icon-bar">
+						</span>
+						<span class="icon-bar">
+						</span>
+					</button>
+					<a class="navbar-brand" href="/admin">
+						Qz阅读
+					</a>
+				</div>
+				<!--navbar content-->
+				<div class="collapse navbar-collapse" id="admin-navbar-collapse">
+					<ul class="nav navbar-nav">
+						<li>
+							<a href="/admin/">
+								Home
+							</a>
+						</li>
+						<li>
+							<a href="/admin/file/">
+								File
+							</a>
+						</li>
+						<li>
+							<a href="/admin/image/">
+								Image
+							</a>
+						</li>
+						<li class="active">
+							<a href="/admin/story/">
+								Story
+							</a>
+						</li>
+						<li>
+							<a href="/admin/user/">
+								Userlist
+							</a>
+						</li>
+						<li>
+							<a href="/admin/useroptview/">
+								UserOption
+							</a>
+						</li>
+					</ul>
+					<ul class="nav navbar-nav navbar-right">
+					</ul>
+					<div class="btn-group pull-right">
+						<a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+							<i class="icon-user">
+							</i>
+							test
+							<span class="caret">
+							</span>
+						</a>
+						<ul class="dropdown-menu">
+							<li>
+								<a href="/admin/logout/">
+									Log out
+								</a>
+							</li>
+						</ul>
+					</div>
+				</div>
+			</nav>
+			<div class="table-responsive">
+				<table class="table table-striped table-bordered table-hover model-list">
+					<thead>
+						<tr>
+							<th class="list-checkbox-column">
+								<input type="checkbox" name="rowtoggle" class="action-rowtoggle" title="Select all records"
+								/>
+							</th>
+							<th class="col-md-1">
+								&nbsp;
+							</th>
+							<th class="column-header col-id">
+								Id
+							</th>
+							<th class="column-header col-name">
+                                文件名
+							</th>
+							<th class="column-header col-path">
+                                URL
+							</th>
+							<th class="column-header col-audio">
+                                音频
+							</th>
+						</tr>
+					</thead>
+                    {{ data|safe }}
+				</table>
+			</div>
+			<form id="action_form" action="/admin/story/action/" method="POST" style="display: none">
+				<input id="url" name="url" type="hidden" value="/admin/story/">
+				<input id="action" name="action" type="hidden" value="">
+			</form>
+		</div>
+		<script src="/admin/static/vendor/jquery.min.js?v=2.1.4" type="text/javascript">
+		</script>
+		<script src="/admin/static/bootstrap/bootstrap3/js/bootstrap.min.js?v=3.3.5"
+		type="text/javascript">
+		</script>
+		<script src="/admin/static/vendor/moment.min.js?v=2.9.0" type="text/javascript">
+		</script>
+		<script src="/admin/static/vendor/select2/select2.min.js?v=3.5.2" type="text/javascript">
+		</script>
+		<script src="/admin/static/admin/js/filters.js?v=1.0.0">
+		</script>
+		<script src="/admin/static/vendor/bootstrap-daterangepicker/daterangepicker.js?v=1.3.22">
+		</script>
+		<script src="/admin/static/admin/js/form.js?v=1.0.1">
+		</script>
+		<script src="/admin/static/admin/js/actions.js?v=1.0.0">
+		</script>
+		<script language="javascript">
+			var modelActions = new AdminModelActions("Please select at least one record.", {
+				"delete": "Are you sure you want to delete selected records?"
+			});
+		</script>
+		<script language="javascript">
+			(function($) {
+				$('[data-role=tooltip]').tooltip({
+					html: true,
+					placement: 'bottom'
+				})
+			})(jQuery);
+			function safeConfirm(msg) {
+				try {
+					var isconfirmed = confirm(msg);
+					if (isconfirmed == true) {
+						return true
+					} else {
+						return false
+					}
+				} catch(err) {
+					return false
+				}
+			}
+		</script>
+	</body>
+
+</html>

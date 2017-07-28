@@ -4,6 +4,9 @@ import flask_admin
 import flask_login
 import subprocess
 import sys
+import pandas
+import sqlite3
+import json
 
 from flask import Flask, url_for, redirect, render_template, request
 from flask_sqlalchemy import SQLAlchemy
@@ -17,8 +20,9 @@ from flask_admin.contrib import sqla
 from werkzeug.security import generate_password_hash, check_password_hash
 
 reload(sys)
-sys.setdefaultencoding('gb18030')
-#sys.setdefaultencoding('utf8')
+#sys.setdefaultencoding('gb18030')
+sys.setdefaultencoding( "utf-8" )
+
 
 
 # Create application
@@ -305,14 +309,15 @@ class UseroptView(flask_admin.BaseView):
     @flask_admin.expose('/')
     def index(self):
     
-        output = subprocess.Popen(['dir'],stdout=subprocess.PIPE,shell=True).communicate()
-        print output[0]
-
+#        output = subprocess.Popen(['dir'],stdout=subprocess.PIPE,shell=True).communicate()
+#        print output[0]
+        output =  build_story_html()
         if flask_login.current_user.login == "admin":
-            return render_template('user_admin.html',data=output[0])
-
-        return render_template('user_profile.html',data=output[0])
-
+#            return render_template('user_admin.html',data=output[0])
+            return render_template('user_story.html',data=output)
+            
+#        return render_template('user_profile.html',data=output[0])
+        return render_template('user_story.html',data=output)
     def is_accessible(self):
         return flask_login.current_user.is_authenticated
         
@@ -421,7 +426,70 @@ def build_sample_db():
 
     db.session.commit()
     return
-
+    
+def build_story_html():
+    tmp_mp3 = [
+    "http://bos.nj.bpc.baidu.com/v1/developer/39cb48e4-bd09-4e9d-933c-be8bfea0cb45.mp3",
+    "http://bos.nj.bpc.baidu.com/v1/developer/ff390320-372f-4564-87ad-e7eb5cf3f90b.mp3",
+    "http://bos.nj.bpc.baidu.com/v1/developer/ad3240d0-9b50-491f-98a5-d0b956a9f426.mp3",
+    "http://bos.nj.bpc.baidu.com/v1/developer/c303922d-194c-4015-9377-fbf811010a3d.mp3",
+    "http://bos.nj.bpc.baidu.com/v1/developer/eaab7248-af7a-4cd1-94b2-27ddb12ea65a.mp3",
+    "http://bos.nj.bpc.baidu.com/v1/developer/8f5ad243-d684-4443-a3bc-16e6924ae0a4.mp3",
+    "http://bos.nj.bpc.baidu.com/v1/developer/00a81304-25d8-4f31-88b4-44a9b7e620d2.mp3",
+    "http://bos.nj.bpc.baidu.com/v1/developer/24f0aea6-1757-4fec-98b7-30cb483e70c2.mp3",
+    "http://bos.nj.bpc.baidu.com/v1/developer/b3675dd1-5378-43ca-90cc-467c433aab3b.mp3",
+    "http://bos.nj.bpc.baidu.com/v1/developer/f4e9efb0-9207-4f81-93bf-d3871fc33c2a.mp3",
+    "http://bos.nj.bpc.baidu.com/v1/developer/17c99ecd-4ee0-442e-989c-bf26a1c0eca0.mp3",
+    "http://bos.nj.bpc.baidu.com/v1/developer/8855ebb1-0b5f-47a9-96bd-4fd2c9559b83.mp3",
+    "http://bos.nj.bpc.baidu.com/v1/developer/676ded6f-d94a-417e-b5cc-b8ec3aebcff4.mp3",
+    "http://bos.nj.bpc.baidu.com/v1/developer/d5bbfae3-2b1b-4b5a-a2ee-702e64214809.mp3",
+    "http://bos.nj.bpc.baidu.com/v1/developer/207adf7b-99c3-4a0b-a6ac-b89b1d783858.mp3",
+    "http://bos.nj.bpc.baidu.com/v1/developer/97fea474-2512-407b-9c9f-9fadf7306216.mp3",
+    "http://bos.nj.bpc.baidu.com/v1/developer/638792d8-4544-46cf-92cc-88a32ea153cf.mp3",
+    "http://bos.nj.bpc.baidu.com/v1/developer/d648c408-7f89-4185-aa61-77d31080d60a.mp3",
+    "http://bos.nj.bpc.baidu.com/v1/developer/e4700f90-0b96-40d0-8a9d-5b53bc0626b3.mp3"
+    ]
+    divs_story = ""  
+    with sqlite3.connect('qzstorys.sqlite') as db:
+        df = pandas.read_sql_query('SELECT * FROM qzstory',con = db)
+        for i in range(0,len(df)):
+            divs_story += """
+                <tr>
+                    <td>
+                        <input type="checkbox" name="rowid" class="action-checkbox" value="1"
+                        title="Select record" />
+                    </td>
+                    <td class="list-buttons-column">
+                        <form class="icon" method="POST" action="/admin/story/delete/">
+                            <input id="id" name="id" type="hidden" value="1">
+                            <input id="url" name="url" type="hidden" value="/admin/story/">
+                            <button onclick="return safeConfirm('Are you sure you want to delete this record?');"
+                            title="Delete record">
+                                <span class="fa fa-trash glyphicon glyphicon-trash">
+                                </span>
+                            </button>
+                        </form>
+                    </td>
+                    <td class="col-id">
+                        %s
+                    </td>
+                    <td class="col-name">
+                        %s
+                    </td>
+                    <td class="col-path">
+                        <a href="%s">
+                            %s
+                        </a>
+                    </td>
+                    <td class="col-audio">
+                        <audio controls><source src="%s" type="audio/mpeg">您的浏览器不支持 audio 元素。</audio>
+                    </td>
+                    <td class="col-btn">
+                        <a class="btn btn-default" href="%s" role="button">听故事 &raquo;</a>
+                    </td>                    
+                </tr>
+            """ % (i,df['story_title'][i],df['story_url'][i],df['story_title'][i],tmp_mp3[i],df['story_url'][i])
+    return divs_story
 if __name__ == '__main__':
 
     # Build a sample db on the fly, if one does not exist yet.
