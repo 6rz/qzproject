@@ -71,15 +71,18 @@ class Image(db.Model):
         return self.name
 
 class Story(db.Model):
+    __tablename__ = 'stories'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Unicode(64))
     path = db.Column(db.Unicode(128))
     audio = db.Column(db.Unicode(128))
-
+    user_story = db.relationship('UserStory', backref='story')
+    
     def __unicode__(self):
         return '%s - %s - %s' % (self.name, self.path,self.audio)
 
 class User(db.Model):
+    __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
     login = db.Column(db.String(80), unique=True)
@@ -87,7 +90,8 @@ class User(db.Model):
     password = db.Column(db.String(64))
     phone = db.Column(db.Unicode(32))
     notes = db.Column(db.UnicodeText)
-
+    user_story = db.relationship('UserStory', backref='user')
+    
     # Flask-Login integration
     def is_authenticated(self):
         return True
@@ -105,6 +109,15 @@ class User(db.Model):
     def __unicode__(self):
         return self.name
 
+class UserStory(db.Model):
+    __tablename__ = 'userstories'
+    id = db.Column(db.Integer, primary_key=True)
+    fk_uid = db.Column(db.Integer, db.ForeignKey('users.id'))
+    fk_sid = db.Column(db.Integer, db.ForeignKey('stories.id'))
+    user_mp3 = db.Column(db.Unicode(128))
+
+    def __unicode__(self):
+        return '%s - %s - %s' % (self.id, self.fk_uid,self.fk_sid)
 
 # Define login and registration forms (for flask-login)
 class LoginForm(form.Form):
@@ -185,7 +198,7 @@ class StoryView(sqla.ModelView):
 
     column_formatters = {
         'path': storyurl,
-        'id': lambda v, c, m, p: m.id*2
+        'id': lambda v, c, m, p: m.id
     }
 
     column_list = ('id', 'name', 'path','audio')
@@ -202,7 +215,7 @@ class UserView(sqla.ModelView):
         rules.FieldSet(('name', 'email', 'phone'), u'个人信息'),
         # Separate header and few fields
         rules.Header(u'备注'),
-#        rules.Field('city'),
+        rules.Field('user_story'),
         # String is resolved to form field, so there's no need to explicitly use `rules.Field`
 #        'country',
         # Show macro from Flask-Admin lib.html (it is included with 'lib' prefix)
@@ -216,10 +229,17 @@ class UserView(sqla.ModelView):
     edit_template = 'rule_edit.html'
 
     column_exclude_list = ('password', 'notes')
-    can_create = False
+#    can_create = False
 
     def is_accessible(self):
         return flask_login.current_user.is_authenticated
+        
+class UserStoryView(sqla.ModelView):
+    column_list = ('id', 'fk_uid', 'fk_sid','user_mp3')
+    column_labels = dict(id=u'ID',fk_uid=u'用户ID',fk_sid=u'故事ID',user_mp3=u'音频')
+    def is_accessible(self):
+        return flask_login.current_user.is_authenticated
+
 # Create customized model view class
 class MyModelView(sqla.ModelView):
 
@@ -374,6 +394,7 @@ admin.add_view(FileView(File, db.session))
 admin.add_view(ImageView(Image, db.session))
 admin.add_view(StoryView(Story, db.session))
 admin.add_view(UserView(User, db.session, name='Userlist'))
+admin.add_view(UserStoryView(UserStory, db.session, name='UserStory'))
 admin.add_view(UseroptView(name = 'UserOption'))
 
 def build_sample_db():
@@ -423,7 +444,14 @@ def build_sample_db():
         story.path = "example_" + str(i)
         story.audio = "example_" + str(i) + ".mp3"
         db.session.add(story)
-
+        
+    for i in [1, 2, 3]:
+        ustory = UserStory()
+        ustory.fk_uid = i
+        ustory.fk_sid = i
+        ustory.user_mp3 = "user_" + str(i) + ".mp3"
+        db.session.add(ustory)
+    
     db.session.commit()
     return
     
@@ -460,12 +488,12 @@ def build_story_html():
                         title="Select record" />
                     </td>
                     <td class="list-buttons-column">
-                        <form class="icon" method="POST" action="/admin/story/delete/">
+                        <form class="icon" method="POST" action="/admin/userstory/edit/">
                             <input id="id" name="id" type="hidden" value="1">
-                            <input id="url" name="url" type="hidden" value="/admin/story/">
-                            <button onclick="return safeConfirm('Are you sure you want to delete this record?');"
-                            title="Delete record">
-                                <span class="fa fa-trash glyphicon glyphicon-trash">
+                            <input id="url" name="url" type="hidden" value="/admin/userstory/">                       
+                            <button onclick="return safeConfirm('Are you sure you want to Add this story to your lib?');"
+                            title="订阅">
+                                <span class="fa fa-plus glyphicon glyphicon-plus">
                                 </span>
                             </button>
                         </form>
