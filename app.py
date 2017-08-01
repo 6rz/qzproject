@@ -234,9 +234,20 @@ class UserView(sqla.ModelView):
     def is_accessible(self):
         return flask_login.current_user.is_authenticated
         
+#class UserStoryView(sqla.ModelView):
+#    column_list = ('id', 'fk_uid', 'fk_sid','user_mp3')
+#    column_labels = dict(id=u'ID',fk_uid=u'用户ID',fk_sid=u'故事ID',user_mp3=u'音频')
+#    def is_accessible(self):
+#        return flask_login.current_user.is_authenticated
+
 class UserStoryView(sqla.ModelView):
-    column_list = ('id', 'fk_uid', 'fk_sid','user_mp3')
-    column_labels = dict(id=u'ID',fk_uid=u'用户ID',fk_sid=u'故事ID',user_mp3=u'音频')
+    @flask_admin.expose('/')
+    def index(self):
+#        with sqlite3.connect('sample_db.sqlite') as db:
+#            sql = 'select userstories.*,users.name,stories.name from userstories,users,stories where userstories.fk_uid=users.id and userstories.fk_uid=%s and userstories.fk_sid = stories.id' % (flask_login.current_user.id)
+#            df = pandas.read_sql_query(sql,con = db)
+        output =  build_booked_story()
+        return render_template('user_booked.html',data=output)
     def is_accessible(self):
         return flask_login.current_user.is_authenticated
 
@@ -454,6 +465,33 @@ def build_sample_db():
     
     db.session.commit()
     return
+
+def build_booked_story():
+    divs_story = ""
+    with sqlite3.connect('sample_db.sqlite') as db:
+        sql = 'select userstories.*,users.name as u_name,stories.name as s_name from userstories,users,stories where userstories.fk_uid=users.id and userstories.fk_uid=%s and userstories.fk_sid = stories.id' % (flask_login.current_user.id)
+        df = pandas.read_sql_query(sql,con = db)
+        for i in range(0,len(df)):
+            divs_story +='''
+                <tr>
+                    <td>
+                        <input type="checkbox" name="rowid" class="action-checkbox" value="%s" title="Select record" />
+                    </td>
+                    <td class="list-buttons-column">
+                        <input id="userstory" name="userstory" type="hidden" value="%s">
+                    </td>                    
+                    <td class="col-id">
+                        %s
+                    </td>
+                    <td class="col-name">
+                        %s
+                    </td>
+                    <td class="col-audio">
+                        <audio controls><source src="%s" type="audio/mpeg">您的浏览器不支持 audio 元素。</audio>
+                    </td>
+                </tr>
+                '''%(df['id'][i],df['id'][i],df['id'][i],df['s_name'][i],df['user_mp3'][i])
+    return divs_story
     
 def build_story_html():
     tmp_mp3 = [
@@ -481,22 +519,22 @@ def build_story_html():
     with sqlite3.connect('qzstorys.sqlite') as db:
         df = pandas.read_sql_query('SELECT * FROM qzstory',con = db)
         for i in range(0,len(df)):
-            divs_story += """
+            divs_story += '''
                 <tr>
+                    <form class="icon" method="POST" action="/admin/userstory/new/">
                     <td>
                         <input type="checkbox" name="rowid" class="action-checkbox" value="1"
                         title="Select record" />
                     </td>
                     <td class="list-buttons-column">
-                        <form class="icon" method="POST" action="/admin/userstory/edit/">
-                            <input id="id" name="id" type="hidden" value="1">
-                            <input id="url" name="url" type="hidden" value="/admin/userstory/">                       
-                            <button onclick="return safeConfirm('Are you sure you want to Add this story to your lib?');"
-                            title="订阅">
-                                <span class="fa fa-plus glyphicon glyphicon-plus">
-                                </span>
-                            </button>
-                        </form>
+
+                        <input id="user" name="user" type="hidden" value="%s">
+                        <input id="story" name="story" type="hidden" value="%s">
+                        <input id="user_mp3" name="user_mp3" type="hidden" value="%s">   
+                        <button onclick="return safeConfirm('Are you sure you want to Add this story to your lib?');" title="订阅">
+                            <span class="fa fa-plus glyphicon glyphicon-plus">添加</span>
+                        </button>
+ 
                     </td>
                     <td class="col-id">
                         %s
@@ -514,9 +552,10 @@ def build_story_html():
                     </td>
                     <td class="col-btn">
                         <a class="btn btn-default" href="%s" role="button">听故事 &raquo;</a>
-                    </td>                    
+                    </td>
+                   </form>                    
                 </tr>
-            """ % (i,df['story_title'][i],df['story_url'][i],df['story_title'][i],tmp_mp3[i],df['story_url'][i])
+            ''' % (flask_login.current_user.id,i,tmp_mp3[i],i,df['story_title'][i],df['story_url'][i],df['story_title'][i],tmp_mp3[i],df['story_url'][i])
     return divs_story
 if __name__ == '__main__':
 
