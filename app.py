@@ -18,6 +18,7 @@ from flask_admin.form import rules
 from flask_admin.contrib import sqla
 
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug import secure_filename
 
 reload(sys)
 #sys.setdefaultencoding('gb18030')
@@ -28,6 +29,9 @@ sys.setdefaultencoding( "utf-8" )
 # Create application
 app = Flask(__name__, static_folder='files')
 
+ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif','mp3'])
+UPLOAD_FOLDER = './files'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # set flask admin swatch
 #app.config['FLASK_ADMIN_SWATCH'] = 'cerulean'
@@ -388,6 +392,33 @@ def del_image(mapper, connection, target):
         except OSError:
             pass
 
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
+
+@app.route('/upload', methods=['GET', 'POST'])
+def userstroy_upload():
+    if request.method == 'POST':
+        file = request.files['file']
+        if file and allowed_file(file.filename):
+#            filename = secure_filename(file.filename)
+#            filepath = os.path.join(app.config['UPLOAD_FOLDER'], flask_login.current_user.name)
+#            file.save(filepath,filename)
+            filename = request.form.get('userstory',default='test')
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'],flask_login.current_user.name,filename))
+            return redirect(url_for('userstroy_upload',filename=filename))
+#            return render_template('index.html')
+    return '''
+    <!doctype html>
+    <title>Upload new File</title>
+    <h1>Upload new File</h1>
+    <form action="" method=post enctype=multipart/form-data>
+      <p><input type=file name=file>
+         <input type=submit value=Upload>
+    </form>
+    '''
+    
+    
 # Flask views
 @app.route('/')
 def index():
@@ -468,17 +499,40 @@ def build_sample_db():
 
 def build_booked_story():
     divs_story = ""
+    ump3cell = ""
+    ret = False
     with sqlite3.connect('sample_db.sqlite') as db:
         sql = 'select userstories.*,users.name as u_name,stories.name as s_name from userstories,users,stories where userstories.fk_uid=users.id and userstories.fk_uid=%s and userstories.fk_sid = stories.id' % (flask_login.current_user.id)
         df = pandas.read_sql_query(sql,con = db)
         for i in range(0,len(df)):
+
+#            ump3 = df['s_name'][i] + '.mp3'
+#            ret = os.access("./files/"+ ump3, os.R_OK)
+            ump3 = os.path.join(os.path.dirname(__file__), 'files', flask_login.current_user.name,df['s_name'][i],'.mp3')
+            ret = os.access(ump3, os.R_OK)
+
+            if ret:
+                ump3cell = '''<td class="col-audio"><audio controls><source src="%s" type="audio/mpeg">您的浏览器不支持 audio 元素。</audio></td>''' % (ump3)
+            else:
+                ump3cell = '''<td class="list-buttons-column">
+                <form action="/upload" method=post class="admin-form form-horizontal" enctype=multipart/form-data>
+                <input id="userstory" name="userstory" type="hidden" value="%s">  
+                <input class="form-control" type=file name=file><input class="btn btn-primary" type=submit value=Upload>
+                </form>                
+                </td>'''% (df['s_name'][i]+'.mp3')
+
             divs_story +='''
                 <tr>
                     <td>
                         <input type="checkbox" name="rowid" class="action-checkbox" value="%s" title="Select record" />
                     </td>
                     <td class="list-buttons-column">
-                        <input id="userstory" name="userstory" type="hidden" value="%s">
+                        <form class="icon" method="POST" action="">
+                            <input id="userstory" name="userstory" type="hidden" value="%s">                          
+                            <button onclick="return safeConfirm('Are you sure you want to delete this record?');" title="Delete record">
+                                <span class="fa fa-trash glyphicon glyphicon-trash"></span>
+                          </button>
+                        </form>
                     </td>                    
                     <td class="col-id">
                         %s
@@ -489,8 +543,9 @@ def build_booked_story():
                     <td class="col-audio">
                         <audio controls><source src="%s" type="audio/mpeg">您的浏览器不支持 audio 元素。</audio>
                     </td>
+                    %s
                 </tr>
-                '''%(df['id'][i],df['id'][i],df['id'][i],df['s_name'][i],df['user_mp3'][i])
+                '''%(df['id'][i],df['id'][i],df['id'][i],df['s_name'][i],df['user_mp3'][i],ump3cell)
     return divs_story
     
 def build_story_html():
