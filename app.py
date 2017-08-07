@@ -32,6 +32,7 @@ app = Flask(__name__, static_folder='files')
 ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif','mp3'])
 UPLOAD_FOLDER = './files'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5MB
 
 # set flask admin swatch
 #app.config['FLASK_ADMIN_SWATCH'] = 'cerulean'
@@ -508,18 +509,15 @@ def build_booked_story():
 
 #            ump3 = df['s_name'][i] + '.mp3'
 #            ret = os.access("./files/"+ ump3, os.R_OK)
-            ump3 = os.path.join(os.path.dirname(__file__), 'files', flask_login.current_user.name,df['s_name'][i],'.mp3')
+            ump3 = os.path.join(os.path.dirname(__file__), 'files', flask_login.current_user.name,df['s_name'][i]+'.mp3')
             ret = os.access(ump3, os.R_OK)
-
+            ump3_path = url_for('static',filename=flask_login.current_user.name+ '/' + df['s_name'][i]+'.mp3')
             if ret:
-                ump3cell = '''<td class="col-audio"><audio controls><source src="%s" type="audio/mpeg">您的浏览器不支持 audio 元素。</audio></td>''' % (ump3)
+                ump3cell = '''<td class="col-audio"><audio controls><source src="%s" type="audio/mpeg">您的浏览器不支持 audio 元素。</audio></td>''' % (ump3_path)
+                btn_cell = "上传"
             else:
-                ump3cell = '''<td class="list-buttons-column">
-                <form action="/upload" method=post class="admin-form form-horizontal" enctype=multipart/form-data>
-                <input id="userstory" name="userstory" type="hidden" value="%s">  
-                <input class="form-control" type=file name=file><input class="btn btn-primary" type=submit value=Upload>
-                </form>                
-                </td>'''% (df['s_name'][i]+'.mp3')
+                ump3cell = '''<th class="col-md-1">&nbsp;</th>'''
+                btn_cell = "重新上传"
 
             divs_story +='''
                 <tr>
@@ -544,8 +542,14 @@ def build_booked_story():
                         <audio controls><source src="%s" type="audio/mpeg">您的浏览器不支持 audio 元素。</audio>
                     </td>
                     %s
+                    <td class="list-buttons-column">
+                        <form action="/upload" method=post class="admin-form form-horizontal" enctype=multipart/form-data>
+                            <input id="userstory" name="userstory" type="hidden" value="%s">  
+                            <input class="form-control" type=file name=file><input class="btn btn-primary" type=submit value=%s>
+                        </form>                
+                    </td>
                 </tr>
-                '''%(df['id'][i],df['id'][i],df['id'][i],df['s_name'][i],df['user_mp3'][i],ump3cell)
+                '''%(df['id'][i],df['id'][i],df['id'][i],df['s_name'][i],df['user_mp3'][i],ump3cell,df['s_name'][i]+'.mp3',btn_cell)
     return divs_story
     
 def build_story_html():
